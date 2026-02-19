@@ -8,7 +8,7 @@ Self-improving AI DevOps engineer demo. FastAPI backend + React frontend.
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
-uvicorn backend.app:app --reload
+uvicorn backend.app.main:app --reload
 ```
 
 API docs: `http://localhost:8000/docs`
