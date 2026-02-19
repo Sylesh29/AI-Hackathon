@@ -99,6 +99,10 @@ button:disabled {
   width: fit-content;
 }
 
+.speak-button {
+  width: fit-content;
+}
+
 .status-row {
   display: flex;
   flex-wrap: wrap;

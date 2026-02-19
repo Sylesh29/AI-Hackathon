@@ -7,6 +7,8 @@ const INCIDENTS = [
   { id: "memory_leak", label: "Memory Leak" },
   { id: "rate_limit", label: "Rate Limit" },
 ];
+const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
+const ELEVENLABS_VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
 
 function toEntries(metrics) {
   return Object.entries(metrics || {});
@@ -44,11 +46,23 @@ export default function App() {
   const [memoryError, setMemoryError] = useState("");
   const [statusError, setStatusError] = useState("");
   const [statusInfo, setStatusInfo] = useState(null);
+  const [speechLoading, setSpeechLoading] = useState(false);
+  const [speechError, setSpeechError] = useState("");
 
   const impactScore = useMemo(
     () => computeImpactScore(pipelineResult?.metrics_before, pipelineResult?.metrics_after),
     [pipelineResult]
   );
+  const selectedMemoryEntry = useMemo(() => {
+    if (!pipelineResult?.signature) return null;
+    return memoryEntries.find((entry) => entry.signature === pipelineResult.signature) || null;
+  }, [memoryEntries, pipelineResult]);
+  const summaryText = useMemo(() => {
+    if (!pipelineResult) return "";
+    const rootCause = pipelineResult.reasoning || "No root-cause reasoning available.";
+    const fix = selectedMemoryEntry?.fix || pipelineResult.patch || "No fix generated.";
+    return `Root cause: ${rootCause}. Fix: ${fix}`;
+  }, [pipelineResult, selectedMemoryEntry]);
 
   async function loadMemory() {
     setMemoryLoading(true);
@@ -97,6 +111,61 @@ export default function App() {
     }
   }
 
+  function speakWithBrowser(text) {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      throw new Error("Browser speech synthesis is unavailable.");
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function speakWithElevenLabs(text) {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_multilingual_v2",
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`ElevenLabs request failed (${res.status}).`);
+    }
+    const audioBuffer = await res.arrayBuffer();
+    const blob = new Blob([audioBuffer], { type: "audio/mpeg" });
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    audio.addEventListener("ended", () => URL.revokeObjectURL(audioUrl), { once: true });
+    await audio.play();
+  }
+
+  async function handleSpeakSummary() {
+    if (!summaryText || speechLoading) return;
+    setSpeechLoading(true);
+    setSpeechError("");
+    try {
+      if (ELEVENLABS_API_KEY) {
+        try {
+          await speakWithElevenLabs(summaryText);
+        } catch {
+          speakWithBrowser(summaryText);
+        }
+      } else {
+        speakWithBrowser(summaryText);
+      }
+    } catch (err) {
+      setSpeechError(err instanceof Error ? err.message : "Could not play speech summary.");
+    } finally {
+      setSpeechLoading(false);
+    }
+  }
+
   return (
     <div className="app">
       <header className="top">
@@ -132,6 +201,14 @@ export default function App() {
         >
           {pipelineLoading ? "Running..." : "Run AutoPilotOps"}
         </button>
+        <button
+          className="speak-button"
+          onClick={handleSpeakSummary}
+          type="button"
+          disabled={!pipelineResult || speechLoading}
+        >
+          {speechLoading ? "Speaking..." : "Speak Summary"}
+        </button>
         <div className="status-row">
           <span>
             Backend status:{" "}
@@ -144,6 +221,7 @@ export default function App() {
           {statusError && <span className="error-text">{statusError}</span>}
         </div>
         {pipelineError && <p className="error-text">Run failed: {pipelineError}</p>}
+        {speechError && <p className="error-text">Speech error: {speechError}</p>}
       </section>
 
       <section className="grid">
