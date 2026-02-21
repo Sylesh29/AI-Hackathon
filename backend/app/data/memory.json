@@ -1,9 +1,23 @@
 [
   {
     "fix": "Add index on account_id and increase pool size.",
-    "last_used": "2026-02-19T18:44:29.437687+00:00",
+    "last_used": "2026-02-19T18:49:27.753362+00:00",
     "outcome": "success",
     "signature": "db_timeout p95>1200 errors>2",
-    "uses": 5
+    "uses": 7
+  },
+  {
+    "fix": "Add TTL eviction and cap cache size.",
+    "last_used": "2026-02-19T18:49:33.485589+00:00",
+    "outcome": "success",
+    "signature": "rss>2.4gb gc_pause>400",
+    "uses": 1
+  },
+  {
+    "fix": "Raise burst limit and add token bucket smoothing.",
+    "last_used": "2026-02-19T18:49:40.113499+00:00",
+    "outcome": "success",
+    "signature": "429>18 api_qps>1200",
+    "uses": 1
   }
 ]

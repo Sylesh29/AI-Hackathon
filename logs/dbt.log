@@ -1,0 +1,76 @@
+[0m12:27:15.169033 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d45a9610>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d444dc40>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d59e21b0>]}
+
+
+============================== 12:27:15.176999 | 4eae27e8-fde0-44d6-8868-fe81913bfa1d ==============================
+[0m12:27:15.176999 [info ] [MainThread]: Running with dbt=1.11.6
+[0m12:27:15.178525 [debug] [MainThread]: running dbt with arguments {'indirect_selection': 'eager', 'write_json': 'True', 'profiles_dir': '/home/sylesh/.dbt', 'use_colors': 'True', 'quiet': 'False', 'no_print': 'None', 'use_experimental_parser': 'False', 'target_path': 'None', 'static_parser': 'True', 'partial_parse': 'True', 'warn_error': 'None', 'cache_selected_only': 'False', 'version_check': 'True', 'invocation_command': 'dbt init autopilot_dbt', 'debug': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'log_path': 'logs', 'log_format': 'default', 'log_cache_events': 'False', 'send_anonymous_usage_stats': 'True', 'fail_fast': 'False', 'empty': 'None', 'introspect': 'True', 'printer_width': '80'}
+[0m12:27:15.199623 [info ] [MainThread]: Creating dbt configuration folder at /home/sylesh/.dbt
+[0m12:27:15.203227 [debug] [MainThread]: Starter project path: /home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/include/starter_project
+[0m12:27:15.213185 [info ] [MainThread]: 
+Your new dbt project "autopilot_dbt" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m12:27:15.214420 [info ] [MainThread]: Setting up your profile.
+[0m12:27:24.120188 [error] [MainThread]: Encountered an error:
+list index out of range
+[0m12:27:24.122862 [error] [MainThread]: Traceback (most recent call last):
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/cli/requires.py", line 182, in wrapper
+    result, success = func(*args, **kwargs)
+                      ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/cli/requires.py", line 128, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/cli/main.py", line 483, in init
+    results = task.run()
+              ^^^^^^^^^^
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/task/init.py", line 346, in run
+    self.setup_profile(profile_name)
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/task/init.py", line 261, in setup_profile
+    adapter = self.ask_for_adapter_choice()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sylesh/.local/share/pipx/venvs/dbt-postgres/lib/python3.12/site-packages/dbt/task/init.py", line 243, in ask_for_adapter_choice
+    return available_adapters[numeric_choice - 1]
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+IndexError: list index out of range
+
+[0m12:27:24.124464 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": false, "command_wall_clock_time": 9.105923, "process_in_blocks": "0", "process_kernel_time": 0.244001, "process_mem_max_rss": "100060", "process_out_blocks": "72", "process_user_time": 3.617588}
+[0m12:27:24.125267 [debug] [MainThread]: Command `dbt init` failed at 12:27:24.125070 after 9.11 seconds
+[0m12:27:24.125983 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d403f140>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d3eda000>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fc9d36aa120>]}
+[0m12:27:24.126971 [debug] [MainThread]: Flushing usage events
+[0m12:27:24.399963 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m12:27:42.174158 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa70c714f20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa70a7fac60>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa70a7d5070>]}
+
+
+============================== 12:27:42.178521 | b0eb7643-0bfa-4b62-bbab-3fe542243fa6 ==============================
+[0m12:27:42.178521 [info ] [MainThread]: Running with dbt=1.11.6
+[0m12:27:42.179373 [debug] [MainThread]: running dbt with arguments {'fail_fast': 'False', 'static_parser': 'True', 'version_check': 'True', 'log_format': 'default', 'partial_parse': 'True', 'printer_width': '80', 'write_json': 'True', 'use_colors': 'True', 'quiet': 'False', 'warn_error': 'None', 'empty': 'None', 'no_print': 'None', 'send_anonymous_usage_stats': 'True', 'debug': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'indirect_selection': 'eager', 'invocation_command': 'dbt init autopilot_dbt', 'target_path': 'None', 'log_path': 'logs', 'use_experimental_parser': 'False', 'profiles_dir': '/home/sylesh/.dbt', 'log_cache_events': 'False'}
+[0m12:27:42.192226 [info ] [MainThread]: A project called autopilot_dbt already exists here.
+[0m12:27:42.193637 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 0.09166001, "process_in_blocks": "0", "process_kernel_time": 0.244936, "process_mem_max_rss": "99884", "process_out_blocks": "8", "process_user_time": 2.609108}
+[0m12:27:42.194303 [debug] [MainThread]: Command `dbt init` succeeded at 12:27:42.194150 after 0.09 seconds
+[0m12:27:42.194835 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa70c57eb70>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa70a7d5520>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7fa709a76b70>]}
+[0m12:27:42.195385 [debug] [MainThread]: Flushing usage events
+[0m12:27:42.451139 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m12:28:59.793109 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f4096983530>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f409628d2e0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f40965431a0>]}
+
+
+============================== 12:28:59.799149 | 8a850fcf-6dda-4c70-a8d6-575d6621f002 ==============================
+[0m12:28:59.799149 [info ] [MainThread]: Running with dbt=1.11.6
+[0m12:28:59.800132 [debug] [MainThread]: running dbt with arguments {'write_json': 'True', 'log_path': 'logs', 'version_check': 'True', 'no_print': 'None', 'quiet': 'False', 'static_parser': 'True', 'use_colors': 'True', 'send_anonymous_usage_stats': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'profiles_dir': '/home/sylesh/.dbt', 'invocation_command': 'dbt init autopilot_dbt', 'empty': 'None', 'fail_fast': 'False', 'use_experimental_parser': 'False', 'debug': 'False', 'indirect_selection': 'eager', 'log_format': 'default', 'target_path': 'None', 'introspect': 'True', 'partial_parse': 'True', 'log_cache_events': 'False', 'warn_error': 'None', 'cache_selected_only': 'False'}
+[0m12:28:59.818729 [info ] [MainThread]: A project called autopilot_dbt already exists here.
+[0m12:28:59.820296 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 0.13436706, "process_in_blocks": "0", "process_kernel_time": 0.296894, "process_mem_max_rss": "100188", "process_out_blocks": "16", "process_user_time": 2.778083}
+[0m12:28:59.821157 [debug] [MainThread]: Command `dbt init` succeeded at 12:28:59.820967 after 0.14 seconds
+[0m12:28:59.821732 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f4096543aa0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f40967032f0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7f40965acb30>]}
+[0m12:28:59.822385 [debug] [MainThread]: Flushing usage events
+[0m12:29:00.006706 [debug] [MainThread]: An error was encountered while trying to flush usage events

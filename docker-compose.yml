@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: autopilotops-backend
+    environment:
+      ENV: development
+      LOG_LEVEL: INFO
+      ALLOWED_ORIGINS: http://localhost:5173
+      # Set API_KEY in production; mutating endpoints require X-API-Key when configured.
+      API_KEY: ""
+      MEMORY_BACKEND: sqlite
+      MEMORY_DB_URL: sqlite:////app/data/memory.db
+      MEMORY_STORE_PATH: /app/data/memory.json
+    volumes:
+      - backend_data:/app/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3); sys.exit(0)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_BACKEND_URL: /api
+    container_name: autopilotops-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  backend_data:

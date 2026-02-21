@@ -103,6 +103,16 @@ button:disabled {
   width: fit-content;
 }
 
+.secondary-button {
+  width: fit-content;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .status-row {
   display: flex;
   flex-wrap: wrap;
@@ -173,6 +183,13 @@ button:disabled {
   margin: 4px 0 6px;
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .plan {
   margin: 0 0 10px;
   padding-left: 18px;
@@ -228,6 +245,36 @@ pre {
   color: var(--danger);
   margin: 0;
   font-size: 13px;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  gap: 8px;
+  z-index: 999;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 360px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.toast-success {
+  border-color: #b8dfc8;
+  background: #eefbf2;
+}
+
+.toast-error {
+  border-color: #f4b5ab;
+  background: #fff2f0;
 }
 
 @media (max-width: 700px) {
