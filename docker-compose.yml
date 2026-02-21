@@ -7,7 +7,7 @@ services:
     environment:
       ENV: development
       LOG_LEVEL: INFO
-      ALLOWED_ORIGINS: http://localhost:5173
+      ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       # Set API_KEY in production; mutating endpoints require X-API-Key when configured.
       API_KEY: ""
       MEMORY_BACKEND: sqlite

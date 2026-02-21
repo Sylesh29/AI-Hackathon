@@ -3,3 +3,8 @@ node_modules/
 dist/
 __pycache__/
 .DS_Store
+
+# local data
+backend/app/data/*.db
+backend/app/data/*.sqlite
+backend/app/data/*.sqlite3

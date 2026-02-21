@@ -2,30 +2,78 @@ const API_KEY = import.meta.env.VITE_API_KEY;
 const DEFAULT_BASE_URL = import.meta.env.PROD
   ? "/api"
   : import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const REQUEST_TIMEOUT_MS = 12000;
 
-async function requestJson(url, options = {}) {
+export class ApiError extends Error {
+  constructor({ message, code = "unknown_error", status = 0, requestId = null, cause = null }) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
+    this.requestId = requestId;
+    this.cause = cause;
+  }
+}
+
+export function toApiError(error, fallbackMessage = "Request failed.") {
+  if (error instanceof ApiError) {
+    return error;
+  }
+  if (error?.name === "AbortError") {
+    return new ApiError({
+      message: "Request timed out. Please try again.",
+      code: "request_timeout",
+      status: 408,
+      cause: error,
+    });
+  }
+  return new ApiError({
+    message: error instanceof Error ? error.message : fallbackMessage,
+    code: "request_failed",
+    cause: error,
+  });
+}
+
+async function requestJson(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   const headers = new Headers(options.headers || {});
   if (API_KEY) {
     headers.set("X-API-Key", API_KEY);
   }
-  const res = await fetch(url, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers, signal: controller.signal });
+  } catch (error) {
+    throw toApiError(error);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
   const requestId = res.headers.get("x-request-id");
   if (!res.ok) {
-    let detail = `${res.status} ${res.statusText}`;
+    let message = `${res.status} ${res.statusText}`;
+    let code = "http_error";
     try {
       const data = await res.json();
       if (data?.error?.message) {
-        detail = data.error.message;
+        message = data.error.message;
       } else if (data?.detail) {
-        detail = data.detail;
+        message = data.detail;
       }
+      code = data?.error?.code || code;
       if (data?.request_id || requestId) {
-        detail = `${detail} (request_id: ${data?.request_id || requestId})`;
+        message = `${message} (request_id: ${data?.request_id || requestId})`;
       }
     } catch {
       // Ignore parsing error and keep the default HTTP status detail.
     }
-    throw new Error(detail);
+    throw new ApiError({
+      message,
+      code,
+      status: res.status,
+      requestId,
+    });
   }
   const data = await res.json();
   if (data && typeof data === "object" && "data" in data) {

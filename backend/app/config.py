@@ -20,7 +20,12 @@ class Settings(BaseSettings):
 
     ENV: str = "development"
     LOG_LEVEL: str | None = None
-    ALLOWED_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    ALLOWED_ORIGINS: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
     API_KEY: str | None = None
     LLM_MODEL: str = "deterministic-sim-v1"
     LLM_TIMEOUT_SECONDS: float = 2.0

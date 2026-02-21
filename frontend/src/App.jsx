@@ -6,7 +6,17 @@ import {
   fetchStatus,
   runAutonomyOnce,
   runPipeline,
+  toApiError,
 } from "./api.js";
+import ControlsPanel from "./components/ControlsPanel.jsx";
+import HeaderSummary from "./components/HeaderSummary.jsx";
+import ImpactPanel from "./components/ImpactPanel.jsx";
+import LogsPanel from "./components/LogsPanel.jsx";
+import MemoryPanel from "./components/MemoryPanel.jsx";
+import PatchPanel from "./components/PatchPanel.jsx";
+import ReasoningPanel from "./components/ReasoningPanel.jsx";
+import SponsorToolsPanel from "./components/SponsorToolsPanel.jsx";
+import StatusBar from "./components/StatusBar.jsx";
 
 const DEFAULT_BASE_URL = import.meta.env.PROD
   ? "/api"
@@ -19,15 +29,6 @@ const INCIDENTS = [
 ];
 const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-
-function toEntries(metrics) {
-  return Object.entries(metrics || {});
-}
-
-function formatNumber(value) {
-  if (typeof value !== "number") return String(value);
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
 
 function computeImpactScore(before, after) {
   const deltas = [];
@@ -42,6 +43,18 @@ function computeImpactScore(before, after) {
   if (deltas.length === 0) return null;
   const avg = deltas.reduce((sum, n) => sum + n, 0) / deltas.length;
   return Math.round(((avg + 1) / 2) * 100);
+}
+
+function toMessage(error, fallback) {
+  return toApiError(error, fallback).message;
+}
+
+function stampLogs(logs = []) {
+  const base = Date.now();
+  return logs.map((log, index) => ({
+    ...log,
+    timestamp: new Date(base + index * 600).toISOString(),
+  }));
 }
 
 export default function App() {
@@ -62,6 +75,8 @@ export default function App() {
   const [autonomyLoading, setAutonomyLoading] = useState(false);
   const [speechError, setSpeechError] = useState("");
   const [toasts, setToasts] = useState([]);
+  const [lastAutonomyRefreshAt, setLastAutonomyRefreshAt] = useState(null);
+  const [autonomyBeat, setAutonomyBeat] = useState(0);
 
   const isBusy = pipelineLoading || speechLoading;
 
@@ -87,7 +102,7 @@ export default function App() {
     setToasts((current) => [...current, { id, type, message }]);
     window.setTimeout(() => {
       setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 3500);
+    }, 3600);
   }
 
   async function loadMemory() {
@@ -96,8 +111,8 @@ export default function App() {
     try {
       const data = await fetchMemory(baseUrl);
       setMemoryEntries(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load memory.";
+    } catch (error) {
+      const message = toMessage(error, "Failed to load memory.");
       setMemoryEntries([]);
       setMemoryError(message);
       addToast("error", `Memory error: ${message}`);
@@ -112,8 +127,8 @@ export default function App() {
     try {
       const data = await fetchStatus(baseUrl);
       setStatusInfo(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to reach backend.";
+    } catch (error) {
+      const message = toMessage(error, "Failed to reach backend.");
       setStatusInfo(null);
       setStatusError(message);
       addToast("error", `Status error: ${message}`);
@@ -127,8 +142,10 @@ export default function App() {
       const [status, runs] = await Promise.all([fetchAutonomyStatus(baseUrl), fetchAutonomyRuns(baseUrl, 5)]);
       setAutonomyInfo(status);
       setAutonomyRuns(runs.runs || []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch autonomy status.";
+      setLastAutonomyRefreshAt(new Date().toLocaleTimeString());
+      setAutonomyBeat((value) => value + 1);
+    } catch (error) {
+      const message = toMessage(error, "Failed to fetch autonomy status.");
       addToast("error", `Autonomy error: ${message}`);
     }
   }
@@ -139,18 +156,25 @@ export default function App() {
     loadAutonomy();
   }, [baseUrl]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      loadAutonomy();
+    }, 12000);
+    return () => window.clearInterval(id);
+  }, [baseUrl]);
+
   async function handleRun() {
     if (isBusy) return;
     setPipelineLoading(true);
     setPipelineError("");
     try {
       const result = await runPipeline(baseUrl, selectedIncident);
-      setPipelineResult(result);
+      setPipelineResult({ ...result, logs: stampLogs(result.logs) });
       await loadMemory();
       await loadAutonomy();
       addToast("success", "Incident pipeline completed.");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Pipeline failed.";
+    } catch (error) {
+      const message = toMessage(error, "Pipeline failed.");
       setPipelineError(message);
       addToast("error", `Run failed: ${message}`);
     } finally {
@@ -170,8 +194,8 @@ export default function App() {
       }
       await loadMemory();
       await loadAutonomy();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Autonomous run failed.";
+    } catch (error) {
+      const message = toMessage(error, "Autonomous run failed.");
       addToast("error", `Autonomy run failed: ${message}`);
     } finally {
       setAutonomyLoading(false);
@@ -224,8 +248,8 @@ export default function App() {
         speakWithBrowser(summaryText);
       }
       addToast("success", "Speaking incident summary.");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not play speech summary.";
+    } catch (error) {
+      const message = toMessage(error, "Could not play speech summary.");
       setSpeechError(message);
       addToast("error", `Speech error: ${message}`);
     } finally {
@@ -241,9 +265,8 @@ export default function App() {
       }
       await navigator.clipboard.writeText(pipelineResult.patch);
       addToast("success", "Patch snippet copied.");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to copy patch.";
-      addToast("error", message);
+    } catch (error) {
+      addToast("error", toMessage(error, "Failed to copy patch."));
     }
   }
 
@@ -280,233 +303,74 @@ export default function App() {
     }
   }
 
+  function handleClearResults() {
+    setPipelineResult(null);
+    setPipelineError("");
+    setSpeechError("");
+  }
+
   return (
     <div className="app">
-      <header className="top">
-        <h1>AutoPilotOps Console</h1>
-        <p>Trigger incidents and inspect multi-agent remediation results.</p>
-      </header>
+      <HeaderSummary
+        autonomyInfo={autonomyInfo}
+        impactScore={impactScore}
+        lastAutonomyRefreshAt={lastAutonomyRefreshAt}
+        autonomyBeat={autonomyBeat}
+        onClear={handleClearResults}
+        disableClear={isBusy && !pipelineResult}
+      />
 
-      <section className="controls">
-        <label htmlFor="baseUrl">Backend URL (VITE_BACKEND_URL)</label>
-        <input
-          id="baseUrl"
-          value={baseUrl}
-          onChange={(event) => {
-            if (!IS_PROD && !isBusy) setBaseUrl(event.target.value);
-          }}
-          placeholder="http://localhost:8000"
-          readOnly={IS_PROD}
-          disabled={isBusy}
+      <ControlsPanel
+        baseUrl={baseUrl}
+        isProd={IS_PROD}
+        isBusy={isBusy}
+        selectedIncident={selectedIncident}
+        incidents={INCIDENTS}
+        onBaseUrlChange={(value) => {
+          if (!IS_PROD && !isBusy) setBaseUrl(value);
+        }}
+        onIncidentChange={setSelectedIncident}
+        onRun={handleRun}
+        onSpeak={handleSpeakSummary}
+        onExport={handleExportReport}
+        onAutonomyRun={handleAutonomyRun}
+        pipelineLoading={pipelineLoading}
+        speechLoading={speechLoading}
+        autonomyLoading={autonomyLoading}
+        hasPipelineResult={Boolean(pipelineResult)}
+        hasSummaryText={Boolean(summaryText)}
+      />
+
+      <StatusBar
+        statusLoading={statusLoading}
+        statusInfo={statusInfo}
+        pipelineLoading={pipelineLoading}
+        autonomyInfo={autonomyInfo}
+        statusError={statusError}
+      />
+
+      {pipelineError ? <p className="errorText">Run failed: {pipelineError}</p> : null}
+      {speechError ? <p className="errorText">Speech error: {speechError}</p> : null}
+
+      <section className="dashboardGrid">
+        <LogsPanel logs={pipelineResult?.logs || []} loading={pipelineLoading} />
+        <ReasoningPanel pipelineResult={pipelineResult} loading={pipelineLoading} />
+        <PatchPanel
+          patch={pipelineResult?.patch}
+          loading={pipelineLoading}
+          onCopy={handleCopyPatch}
+          disabled={!pipelineResult?.patch || isBusy}
         />
-
-        <div className="incident-buttons">
-          {INCIDENTS.map((incident) => (
-            <button
-              key={incident.id}
-              className={incident.id === selectedIncident ? "active" : ""}
-              onClick={() => setSelectedIncident(incident.id)}
-              type="button"
-              disabled={isBusy}
-            >
-              {incident.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="action-row">
-          <button className="run-button" onClick={handleRun} type="button" disabled={isBusy || statusLoading}>
-            {pipelineLoading ? "Running..." : "Run AutoPilotOps"}
-          </button>
-          <button
-            className="speak-button"
-            onClick={handleSpeakSummary}
-            type="button"
-            disabled={!pipelineResult || speechLoading || pipelineLoading}
-          >
-            {speechLoading ? "Speaking..." : "Speak Summary"}
-          </button>
-          <button
-            className="secondary-button"
-            onClick={handleExportReport}
-            type="button"
-            disabled={!pipelineResult || isBusy}
-          >
-            Export Report JSON
-          </button>
-          <button
-            className="secondary-button"
-            onClick={handleAutonomyRun}
-            type="button"
-            disabled={isBusy || autonomyLoading}
-          >
-            {autonomyLoading ? "Autonomy..." : "Autonomy Tick"}
-          </button>
-        </div>
-
-        <div className="status-row">
-          <span>
-            Backend status:{" "}
-            {statusLoading
-              ? "Checking..."
-              : statusInfo
-              ? `${statusInfo.status} (uptime ${Math.round(statusInfo.uptime_seconds)}s)`
-              : "Unavailable"}
-          </span>
-          <span>Pipeline: {pipelineLoading ? "Running" : "Idle"}</span>
-          <span>
-            Autonomy: {autonomyInfo?.running ? "Running" : autonomyInfo?.enabled ? "Enabled" : "Disabled"}
-          </span>
-          {statusError && <span className="error-text">{statusError}</span>}
-        </div>
-
-        {pipelineError && <p className="error-text">Run failed: {pipelineError}</p>}
-        {speechError && <p className="error-text">Speech error: {speechError}</p>}
+        <ImpactPanel
+          before={pipelineResult?.metrics_before}
+          after={pipelineResult?.metrics_after}
+          impactScore={impactScore}
+        />
+        <SponsorToolsPanel autonomyInfo={autonomyInfo} autonomyRuns={autonomyRuns} />
+        <MemoryPanel entries={memoryEntries} loading={memoryLoading} error={memoryError} />
       </section>
 
-      <section className="grid">
-        <article className="panel">
-          <h2>Logs</h2>
-          <div className="log-panel">
-            {pipelineLoading && <p className="muted">Running pipeline...</p>}
-            {!pipelineLoading && pipelineResult?.logs?.length ? (
-              pipelineResult.logs.map((log, idx) => (
-                <div key={`${log.agent}-${idx}`} className="log-row">
-                  <span className="mono">{log.agent}</span>
-                  <span>{log.message}</span>
-                </div>
-              ))
-            ) : null}
-            {!pipelineLoading && !pipelineResult?.logs?.length && <p className="muted">No logs yet.</p>}
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>Agent Reasoning</h2>
-          <div className="kv">
-            <span>Anomaly</span>
-            <span className="mono">
-              {pipelineResult ? `${pipelineResult.incident_type}: ${pipelineResult.signature}` : "-"}
-            </span>
-          </div>
-          <div className="kv">
-            <span>Root Cause</span>
-            <span>{pipelineResult?.reasoning || (pipelineLoading ? "Analyzing..." : "-")}</span>
-          </div>
-          <div className="kv">
-            <span>Confidence</span>
-            <span>{pipelineResult ? (pipelineResult.memory_used ? "0.93" : "0.78") : "-"}</span>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>Patch</h2>
-          <div className="subhead">Plan</div>
-          <ul className="plan">
-            <li>Diagnose and select fix strategy</li>
-            <li>Apply patch in sandbox</li>
-            <li>Validate outcome and persist memory</li>
-          </ul>
-          <div className="panel-actions">
-            <div className="subhead">Snippet</div>
-            <button
-              className="secondary-button"
-              onClick={handleCopyPatch}
-              type="button"
-              disabled={!pipelineResult?.patch || isBusy}
-            >
-              Copy Patch
-            </button>
-          </div>
-          <pre>{pipelineResult?.patch || (pipelineLoading ? "Generating patch..." : "Patch snippet will appear after run.")}</pre>
-        </article>
-
-        <article className="panel">
-          <h2>Impact</h2>
-          <div className="metrics-grid">
-            <div>
-              <div className="subhead">Before</div>
-              {toEntries(pipelineResult?.metrics_before).map(([key, value]) => (
-                <div className="kv" key={`before-${key}`}>
-                  <span>{key}</span>
-                  <span>{formatNumber(value)}</span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="subhead">After</div>
-              {toEntries(pipelineResult?.metrics_after).map(([key, value]) => (
-                <div className="kv" key={`after-${key}`}>
-                  <span>{key}</span>
-                  <span>{formatNumber(value)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="score">
-            Impact score: <strong>{impactScore === null ? "-" : `${impactScore}/100`}</strong>
-          </div>
-        </article>
-
-        <article className="panel full">
-          <h2>Autonomy + Sponsor Tools</h2>
-          <div className="kv">
-            <span>Learning score</span>
-            <span>{autonomyInfo ? `${autonomyInfo.learning_score}/100` : "-"}</span>
-          </div>
-          <div className="kv">
-            <span>Memory hit rate</span>
-            <span>{autonomyInfo ? `${autonomyInfo.memory_hit_rate_percent}%` : "-"}</span>
-          </div>
-          <div className="kv">
-            <span>Integrations</span>
-            <span className="mono">
-              {autonomyInfo
-                ? `Lightdash=${autonomyInfo.sponsor_integrations.lightdash}, Airia=${autonomyInfo.sponsor_integrations.airia}, Modulate=${autonomyInfo.sponsor_integrations.modulate}`
-                : "-"}
-            </span>
-          </div>
-          {autonomyRuns.length > 0 ? (
-            <div className="memory-list">
-              {autonomyRuns.map((run, idx) => (
-                <div className="memory-row" key={`${run.request_id}-${idx}`}>
-                  <div className="mono">{run.timestamp}</div>
-                  <div>{run.incident_type}</div>
-                  <div>Impact: {run.impact_score ?? "-"}</div>
-                  <div>Memory used: {run.memory_used ? "yes" : "no"}</div>
-                  <div>Lightdash: {run.sponsors?.lightdash || "-"}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="muted">No autonomous runs yet.</p>
-          )}
-        </article>
-
-        <article className="panel full">
-          <h2>Memory</h2>
-          {memoryLoading && <p className="muted">Loading memory...</p>}
-          {memoryError && <p className="error-text">Memory error: {memoryError}</p>}
-          {!memoryLoading && !memoryError && memoryEntries.length === 0 && (
-            <p className="muted">No learned patterns yet.</p>
-          )}
-          {!memoryLoading && !memoryError && memoryEntries.length > 0 && (
-            <div className="memory-list">
-              {memoryEntries.map((entry, idx) => (
-                <div className="memory-row" key={`${entry.signature}-${idx}`}>
-                  <div className="mono">{entry.signature}</div>
-                  <div>{entry.fix}</div>
-                  <div>Outcome: {entry.outcome}</div>
-                  <div>Uses: {entry.uses}</div>
-                  <div>Last used: {entry.last_used || "-"}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-      </section>
-
-      <div className="toast-stack">
+      <div className="toastStack" aria-live="polite" aria-atomic="true">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.type}`}>
             {toast.message}
