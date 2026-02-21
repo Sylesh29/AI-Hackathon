@@ -40,15 +40,15 @@ class Settings(BaseSettings):
     AUTONOMY_ENABLED: bool = True
     AUTONOMY_POLL_SECONDS: int = 20
     AUTONOMY_MAX_RUNS: int = 50
-    LIGHTDASH_API_URL: str | None = None
-    LIGHTDASH_API_KEY: str | None = None
-    LIGHTDASH_PROJECT: str | None = None
+    LIGHTDASH_API_URL: https://app.lightdash.cloud/api/v1 | None = None
+    LIGHTDASH_API_KEY: ldpat_4bc12dddf454a54e9dc0aff285d135e5 | None = None
+    LIGHTDASH_PROJECT: f337a7fb-c600-4212-945c-87ec9eba8a32 | None = None
     LIGHTDASH_INSTANCE_URL: str = "https://app.lightdash.cloud"
     LIGHTDASH_PROJECT_UUID: str | None = None
     AIRIA_API_URL: str | None = None
-    AIRIA_API_KEY: str | None = None
+    AIRIA_API_KEY: ak-MTU3NDYzMTAwNXwxNzcxNzA0ODQzMzIzfHRpLVUxVk9XUzFQY0dWdUlGSmxaMmx6ZEhKaGRHbHZiaTFCYVhKcFlTQkdjbVZsfDF8MTcwMjY2NDQ1MiAg | None = None
     MODULATE_API_URL: str | None = None
-    MODULATE_API_KEY: str | None = None
+    MODULATE_API_KEY: 4c5b488d-b3ac-c831-07b7-432d730dcf95 | None = None
     MODULATE_VOICE: str | None = None
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
