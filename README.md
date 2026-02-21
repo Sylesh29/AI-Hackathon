@@ -1,192 +1,157 @@
-# AutoPilotOps
+# 🚀 AutoPilotOps: Autonomous Incident Remediation
 
-Self-improving AI DevOps engineer demo. FastAPI backend + React frontend.
+## 🧠 About the Project
 
-## Configuration
+AutoPilotOps was born from a simple question:
 
-Copy `.env.example` to `.env` and adjust values.
+> *What if incident response could be autonomous?*
 
-Backend settings are loaded via `pydantic-settings`:
+Modern production systems generate massive volumes of events and logs, but engineers still manually diagnose and fix failures. We set out to build a system that **detects failures, reasons about causes, applies fixes safely, validates outcomes, and learns from experience** — all autonomously.
 
-- `ENV`: environment name (default: `development`)
-- `LOG_LEVEL`: optional Python log level override (defaults by ENV: development=`DEBUG`, production=`INFO`)
-- `ALLOWED_ORIGINS`: comma-separated explicit CORS origins (required, wildcard `*` is rejected; production requires `https://` non-localhost origins)
-- `API_KEY`: API key for mutating endpoints (`/simulate_incident`, `/run_pipeline`); required in production
-- `LLM_MODEL`: model label used for diagnosis generation and metrics
-- `LLM_TIMEOUT_SECONDS`: per-attempt timeout for LLM calls
-- `LLM_MAX_RETRIES`: retry count for LLM calls before fallback
-- `LLM_RETRY_BACKOFF_MS`: delay between retries
-- `MEMORY_BACKEND`: `sqlite`, `json`, or `auto` (default: `sqlite`)
-- `MEMORY_DB_URL`: SQLAlchemy DB URL for SQLite memory store
-- `MEMORY_STORE_PATH`: path to the memory JSON file
-- `MAX_REQUEST_SIZE_BYTES`: request body size limit for mutating endpoints
-- `RATE_LIMIT_REQUESTS_PER_WINDOW`: max mutating requests per IP in a window
-- `RATE_LIMIT_WINDOW_SECONDS`: rate-limit window size in seconds
-- `AUTONOMY_ENABLED`: starts autonomous control loop at API startup
-- `AUTONOMY_POLL_SECONDS`: interval for real-time telemetry checks
-- `AUTONOMY_MAX_RUNS`: in-memory retention of autonomous run history
-- `LIGHTDASH_API_URL`: real-time metrics source endpoint
-- `LIGHTDASH_API_KEY`: optional auth for Lightdash endpoint
-- `LIGHTDASH_PROJECT`: project label for telemetry payloads
-- `AIRIA_API_URL`: endpoint for autonomous action dispatch
-- `AIRIA_API_KEY`: optional auth for Airia endpoint
-- `MODULATE_API_URL`: endpoint for voice/alert delivery
-- `MODULATE_API_KEY`: optional auth for Modulate endpoint
-- `MODULATE_VOICE`: optional voice/profile id for Modulate calls
+This project taught us how to design multi-agent systems that behave like *self-healing site reliability engineers (SREs)*. Along the way we tackled production-grade API design, integrated observability tooling, and created a reusable remediation loop.
 
+---
 
-Production behavior switches by `ENV`:
+## 💡 Inspiration
 
-- `ENV=production`: docs/OpenAPI disabled (`/docs`, `/redoc`, `/openapi.json` unavailable)
-- `ENV=production`: `API_KEY` required
-- `ENV=production`: strict HTTPS non-localhost CORS enforcement
-- Logging defaults to `INFO` in production and `DEBUG` in development unless `LOG_LEVEL` is set
+Infrastructure systems today are monitored closely by observability platforms (metrics, logs, traces), yet bridging the gap between detection and remediation remains manual. We wanted to build the next layer of infrastructure — one where the system continually **improves itself** by learning from past incidents.
 
-Frontend optional env vars:
+Our inspiration came from:
 
-- `VITE_BACKEND_URL`: frontend backend base URL (in production Docker, defaults to `/api` via Nginx reverse proxy)
-- `VITE_API_KEY`: sent as `X-API-Key` header to backend
-- `VITE_ELEVENLABS_API_KEY`: enables ElevenLabs TTS
-- `VITE_ELEVENLABS_VOICE_ID`: ElevenLabs voice id
+- Real SRE workflows
+- Modern observability and AI tooling
+- The idea of self-improving agents
 
-## Security Middleware
+---
 
-Mutating endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) pass through middleware that enforces:
+## 🔍 What It Does
 
-- API key validation (`X-API-Key`) when `API_KEY` is configured
-- Request size guard using `MAX_REQUEST_SIZE_BYTES`
-- Per-IP rate limiting using `RATE_LIMIT_REQUESTS_PER_WINDOW` and `RATE_LIMIT_WINDOW_SECONDS`
+AutoPilotOps simulates real types of production incidents:
 
-Error responses are explicit:
+- **Database timeout**
+- **Memory leak**
+- **Rate limit saturation**
 
-- `401`: missing/invalid API key for mutating endpoint
-- `413`: request body exceeded configured size limit
-- `429`: per-IP rate limit exceeded for mutating endpoints
+Each incident is processed through a pipeline of agents:
 
-## API Response Schema
+1. **Monitor Agent** — Detects anomalous metrics and errors  
+2. **Diagnose Agent** — Infers root cause using memory + reasoning  
+3. **Patch Agent** — Proposes remediation strategy  
+4. **Sandbox Agent** — Tests the patch in isolation  
+5. **Evaluate Agent** — Measures before/after impact  
+6. **Memory System** — Stores successful patterns for future reuse  
 
-All responses include a `request_id`.
+We model impact using systems metrics. For example, the overall impact score is a function of measured changes:
 
-Success response shape:
+$$
+Impact = f(\Delta latency,\ \Delta error\_rate,\ \Delta throughput)
+$$
 
-```json
-{
-  "request_id": "uuid-or-forwarded-id",
-  "data": { "..." : "endpoint payload" }
-}
-```
+---
 
-Error response shape:
+## 🏗 How We Built It
 
-```json
-{
-  "request_id": "uuid-or-forwarded-id",
-  "error": {
-    "code": "validation_error",
-    "message": "Request validation failed.",
-    "details": []
-  }
-}
-```
+### 🧩 Backend
 
-The server also returns `X-Request-ID` response header. Unhandled exceptions return a generic `500` error message and do not expose stack traces to clients.
+- **FastAPI** for REST endpoints  
+- Modular multi-agent pipeline  
+- Memory persistence via both SQLite & JSON  
+- Middleware for:
+  - API key auth
+  - Rate limiting
+  - Request size limits
+  - Structured request ID tracing  
+- Structured logging for observability
 
-## Operational Endpoints
+---
 
-- `GET /health`: liveness check
-- `GET /ready`: readiness check (verifies memory store accessibility)
-- `GET /autonomy/status`: autonomous loop status + learning metrics
-- `GET /autonomy/runs`: recent autonomous runs and sponsor-tool actions
-- `POST /autonomy/run_once`: force one autonomous telemetry check/tick
+### 🖥 Frontend
 
-`/ready` returns `503` with structured error details when dependencies are not accessible.
+- **React + Vite** for SPA dashboard  
+- Modular components showing:
+  - Backend status
+  - Incident controls
+  - Agent logs and reasoning
+  - Patch suggestions
+  - Impact results  
+- Export JSON and voice summary support
 
-## Logging
+---
 
-Backend logs are structured JSON and include request metadata:
+### 🔗 Integrations
 
-- `request_id`
-- `method`
-- `path`
-- `status_code`
-- `duration_ms`
+- **Lightdash API** for external metric validation
+  - Uses `Authorization: ApiKey <token>`
+- Simulation support for sponsor tools (e.g., Airia, Modulate)
 
-Pipeline runs emit per-step timing logs under `timings_ms` and a final `pipeline_completed` event with total duration.
-LLM calls are wrapped with timeout/retry and deterministic fallback, and emit safe logs/metrics (no prompt contents).
+---
 
-## Memory Persistence
+### 📦 Deployment
 
-Memory persistence uses a repository layer:
+- Dockerized frontend + backend
+- Health endpoints (`/health`, `/ready`)
+- Production ENV configs
 
-- Primary: SQLite via SQLAlchemy (`MEMORY_BACKEND=sqlite`)
-- Development fallback: if SQLite is unavailable in `ENV=development`, backend falls back to JSON file storage (`MEMORY_STORE_PATH`)
+---
 
-Repository tests live under `backend/tests`.
+## 💪 Technical Highlights
 
-## Hackathon Requirements Coverage
+- Multi-agent structured pipeline
+- Self-improving memory loop
+- Sandbox validation before persistence
+- Clean separation between detection, reasoning, and remediation
+- Fault-tolerant LLM wrapper (timeout + fallback)
+- CORS and security enforced
 
-AutoPilotOps now supports strict autonomous operation with sponsor-tool wiring:
+---
 
-- Real-time data ingestion: `LightdashClient` pulls live telemetry (or deterministic fallback simulation)
-- Meaningful autonomous action: anomaly thresholds trigger full remediation pipeline
-- Continuous self-improvement: memory store reuse drives memory-hit rate and learning score
-- Sponsor tools: Lightdash (telemetry), Airia (action dispatch), Modulate (voice summary/alerts)
+## 🤯 Challenges We Faced
 
-## Backend
+**Simulating Real Incidents**  
+We had to design meaningful yet synthetic incidents that resemble real failures.
 
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --reload
-```
+**Memory Reuse**  
+Balancing deterministic logic with store & reuse of past fixes required careful design.
 
-API docs: `http://localhost:8000/docs`
+**Production Readiness**  
+Adding structured logging, middleware, and readiness checks made this more than a toy demo.
 
-## Frontend
+**External API Integration**  
+Lightdash uses `ApiKey` auth (not Bearer), which required correct header handling.
 
-```bash
-cd frontend
-cp .env.example .env
-npm install
-npm run dev
-```
+---
 
-Open `http://localhost:5173`.
+## 📘 What We Learned
 
-## Quality Tooling
+- Agents should have clear responsibilities
+- Metrics + reasoning loops improve over time
+- Production grade equals *predictable failures*
+- Integrations must be secure and configurable
 
-Backend checks:
+---
 
-- `ruff check backend/app backend/tests`
-- `pytest -q` (run from `backend/`)
-- `python -m compileall app` (run from `backend/`)
+## ✨ Future Vision
 
-Pre-commit setup:
+AutoPilotOps is a step toward truly autonomous infrastructure:
 
-```bash
-pip install pre-commit
-pre-commit install
-```
+- Run tests in CI/CD automatically
+- Automated rollback & canary deployments
+- Use reinforcement learning to optimize fixes
+- Support distributed microservice remediation
 
-CI runs on GitHub Actions for backend and frontend lint/test/build checks.
+We believe infrastructure **should not just scale — it should heal itself.**
 
-## Docker Compose
+---
 
-Run full stack with Docker:
+## 🛠 Built With
 
-```bash
-docker compose up --build
-```
-
-Services:
-
-- Frontend: `http://localhost:5173`
-- Backend API (direct): `http://localhost:8000`
-- Backend API (recommended via frontend origin): `http://localhost:5173/api`
-- Backend docs: `http://localhost:8000/docs`
-
-Container healthchecks:
-
-- Backend uses `GET /ready`
-- Frontend uses `GET /health` (Nginx endpoint)
+- **Python**  
+- **FastAPI**  
+- **React**  
+- **Vite**  
+- **SQLite**  
+- **Docker**  
+- **Lightdash API**  
+- **REST API patterns**  
+- **Structured logging**  
+- **Multi-Agent Architecture**
